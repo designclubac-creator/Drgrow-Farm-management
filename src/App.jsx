@@ -4,8 +4,7 @@ import HomePage from './pages/HomePage';
 
 const STORE_PREFIX = 'drgrow:data:';
 const LAST_MOBILE_KEY = 'drgrow:lastMobile';
-const DEMO_MOBILE = '7358857006';
-const DEMO_PIN = '0405';
+const STORAGE_VERSION = 1;
 
 const emptyPond = (i) => ({
   name: `Pond ${i + 1}`,
@@ -58,6 +57,25 @@ function mobileKey(mobile) {
   return digits.length === 10 ? `${STORE_PREFIX}${digits}` : '';
 }
 
+function saveFarmData(mobile, data) {
+  const key = mobileKey(mobile);
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify({ ...data, version: STORAGE_VERSION }));
+  localStorage.setItem(LAST_MOBILE_KEY, mobile.replace(/\D/g, '').slice(-10));
+}
+
+function loadFarmData(mobile) {
+  const key = mobileKey(mobile);
+  if (!key) return null;
+  const saved = localStorage.getItem(key);
+  if (!saved) return null;
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return null;
+  }
+}
+
 function formattedMobile(mobile) {
   const digits = (mobile || '').replace(/\D/g, '').slice(-10);
   return digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : 'Not added';
@@ -97,9 +115,8 @@ async function detectLocationName() {
 }
 
 function initialState() {
-  const lastMobile = localStorage.getItem(LAST_MOBILE_KEY) === DEMO_MOBILE ? DEMO_MOBILE : '';
   return {
-    app: { name: '', loc: '', mobile: lastMobile },
+    app: { name: '', loc: '', mobile: '' },
     ponds: [emptyPond(0), emptyPond(1), emptyPond(2)],
     entries: [],
     cultureData: {},
@@ -108,6 +125,7 @@ function initialState() {
 
 export default function App() {
   const [screen, setScreen] = useState('auth');
+  const [authMode, setAuthMode] = useState('signin');
   const [app, setApp] = useState(initialState().app);
   const [ponds, setPonds] = useState(initialState().ponds);
   const [entries, setEntries] = useState(initialState().entries);
@@ -116,12 +134,9 @@ export default function App() {
   const [fabOpen, setFabOpen] = useState(false);
 
   useEffect(() => {
-    if (app.mobile.replace(/\D/g, '').slice(-10) !== DEMO_MOBILE) return;
-    const key = mobileKey(app.mobile);
-    if (!key) return;
-    localStorage.setItem(key, JSON.stringify({ app, ponds, entries, cultureData }));
-    localStorage.setItem(LAST_MOBILE_KEY, DEMO_MOBILE);
-  }, [app, ponds, entries, cultureData]);
+    if (screen === 'auth') return;
+    saveFarmData(app.mobile, { app, ponds, entries, cultureData });
+  }, [app, ponds, entries, cultureData, screen]);
 
   const totals = useMemo(() => {
     return entries.reduce(
@@ -154,20 +169,22 @@ export default function App() {
     const isNewUser = Boolean(options.isNewUser);
     const profile = options.profile;
     const digits = mobile.replace(/\D/g, '').slice(-10);
-    if (digits !== DEMO_MOBILE || pin !== DEMO_PIN) {
-      notify('Unauthorised number or PIN');
+    if (digits.length !== 10 || pin.length !== 4) {
+      notify('Enter valid mobile number and PIN');
       return false;
     }
 
-    const key = mobileKey(digits);
-    const saved = key ? localStorage.getItem(key) : null;
+    const saved = loadFarmData(digits);
     setApp((prev) => ({ ...prev, mobile: digits }));
     if (isNewUser && profile) {
       const pondCount = Math.min(20, Math.max(1, Number(profile.pondCount) || 3));
-      setApp({ name: profile.name, loc: profile.loc, mobile: digits });
-      setPonds(Array.from({ length: pondCount }, (_, i) => normalizePond(emptyPond(i))));
+      const nextApp = { name: profile.name, loc: profile.loc, mobile: digits };
+      const nextPonds = Array.from({ length: pondCount }, (_, i) => normalizePond(emptyPond(i)));
+      setApp(nextApp);
+      setPonds(nextPonds);
       setEntries([]);
       setCultureData({});
+      saveFarmData(digits, { app: nextApp, ponds: nextPonds, entries: [], cultureData: {} });
       navigate('home');
       notify(`Welcome ${profile.name}`);
       return true;
@@ -175,31 +192,42 @@ export default function App() {
 
     if (saved && !isNewUser) {
       try {
-        const data = JSON.parse(saved);
-        setApp({ ...(data.app || {}), mobile: digits });
-        setPonds((data.ponds?.length ? data.ponds : [emptyPond(0), emptyPond(1), emptyPond(2)]).map(normalizePond));
-        setEntries(data.entries || []);
-        setCultureData(data.cultureData || {});
-        if (data.app?.name && data.app?.loc) {
-          navigate('home');
-          notify('Saved farm data restored');
-          return true;
+        if (!saved.app?.name) {
+          setAuthMode('signup');
+          navigate('auth');
+          notify('Please complete your account profile');
+          return 'needsProfile';
         }
+
+        setApp({ ...(saved.app || {}), mobile: digits });
+        setPonds((saved.ponds?.length ? saved.ponds : [emptyPond(0), emptyPond(1), emptyPond(2)]).map(normalizePond));
+        setEntries(saved.entries || []);
+        setCultureData(saved.cultureData || {});
+        navigate('home');
+        notify('Saved farm data restored');
+        return true;
       } catch {
         notify('Unable to restore saved data');
       }
     }
 
-    if (!saved && !isNewUser) {
-      notify('New user? Please sign up first');
-      return false;
+    if (!isNewUser) {
+      setAuthMode('signup');
+      navigate('auth');
+      notify('Please complete your account profile');
+      return 'needsProfile';
     }
 
-    notify('Please sign up to create your farm profile');
+    notify('Please enter your profile details');
     return false;
   }
 
   function logout() {
+    setApp({ name: '', loc: '', mobile: '' });
+    setPonds([emptyPond(0), emptyPond(1), emptyPond(2)].map(normalizePond));
+    setEntries([]);
+    setCultureData({});
+    setAuthMode('signin');
     navigate('auth');
     notify('Logged out. Your data is saved locally.');
   }
@@ -262,7 +290,7 @@ export default function App() {
 
   return (
     <div className="relative mx-auto h-screen h-dvh w-full max-w-[430px] overflow-hidden bg-drgrow-bg text-drgrow-ink shadow-2xl shadow-slate-900/10">
-      {screen === 'auth' && <AuthPage mobile={app.mobile} setMobile={(mobile) => setApp((prev) => ({ ...prev, mobile }))} onDetectLocation={detectLocationName} onAuth={authenticate} />}
+      {screen === 'auth' && <AuthPage initialMode={authMode} mobile={app.mobile} setMobile={(mobile) => setApp((prev) => ({ ...prev, mobile }))} onDetectLocation={detectLocationName} onAuth={authenticate} />}
       {screen === 'home' && <HomePage {...shared} fabOpen={fabOpen} setFabOpen={setFabOpen} />}
       {screen === 'add' && <AddEntryScreen {...shared} />}
       {screen === 'cost' && <CostTrackerScreen {...shared} />}
