@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import aquaconnectLogo from '../../assets/aquaconnect-logo.svg';
+import logo from '../../assets/logo.svg';
 
 export default function AuthPage({ mobile, setMobile, onDetectLocation, onAuth }) {
   const [mode, setMode] = useState('signin');
@@ -17,10 +19,10 @@ export default function AuthPage({ mobile, setMobile, onDetectLocation, onAuth }
   function submit(event) {
     event.preventDefault();
     if (isForgot) {
-      if (mobile.replace(/\D/g, '').slice(-10) === '7358857006') {
-        setError('Demo PIN is 0405');
+      if (validMobile) {
+        setError('Use any 4 digit PIN for this demo');
       } else {
-        setError('Unauthorised number');
+        setError('Enter a valid mobile number');
       }
       return;
     }
@@ -31,7 +33,7 @@ export default function AuthPage({ mobile, setMobile, onDetectLocation, onAuth }
       profile: isSignUp ? { name: name.trim(), loc: loc.trim(), pondCount } : null,
     });
     if (!ok) {
-      setError(isSignUp ? 'Only demo number can sign up' : 'Unauthorised number or PIN');
+      setError('Enter a valid mobile number and 4 digit PIN');
       setPin('');
     }
   }
@@ -59,7 +61,7 @@ export default function AuthPage({ mobile, setMobile, onDetectLocation, onAuth }
       <div className="flex min-h-full flex-1 flex-col overflow-y-auto bg-white px-4 py-6 sm:px-6">
         <div className="mx-auto flex w-full max-w-[430px] flex-1 flex-col">
           <div className="flex shrink-0 justify-center">
-            <img className="w-[min(168px,42vw)] max-[360px]:w-[min(140px,46vw)]" src="./assets/logo.svg" alt="Dr. Grow" />
+            <img className="w-[min(168px,42vw)] max-[360px]:w-[min(140px,46vw)]" src={logo} alt="Dr. Grow" />
           </div>
 
           <div className="mt-8 grid w-full grid-cols-4 gap-3 sm:gap-4">
@@ -74,7 +76,7 @@ export default function AuthPage({ mobile, setMobile, onDetectLocation, onAuth }
               {isForgot ? 'Forgot PIN' : isSignUp ? 'Sign up' : 'Sign in'}
             </h1>
             <p className="mt-1 text-sm text-neutral-500 sm:text-base">
-              {isForgot ? 'Recover your demo access' : isSignUp ? 'Create your farm profile' : 'Welcome back'}
+              {isForgot ? 'Recover demo access' : isSignUp ? 'Create your farm profile' : 'Welcome back'}
             </p>
           </div>
 
@@ -209,7 +211,7 @@ function BrandFooter() {
   return (
     <>
       <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">A brand of</p>
-      <img className="mx-auto w-[min(170px,48vw)]" src="./assets/aquaconnect-logo.svg" alt="Aquaconnect" />
+      <img className="mx-auto w-[min(170px,48vw)]" src={aquaconnectLogo} alt="Aquaconnect" />
     </>
   );
 }

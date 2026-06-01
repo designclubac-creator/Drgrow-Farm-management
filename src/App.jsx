@@ -4,8 +4,6 @@ import HomePage from './pages/HomePage';
 
 const STORE_PREFIX = 'drgrow:data:';
 const LAST_MOBILE_KEY = 'drgrow:lastMobile';
-const DEMO_MOBILE = '7358857006';
-const DEMO_PIN = '0405';
 
 const emptyPond = (i) => ({
   name: `Pond ${i + 1}`,
@@ -97,7 +95,7 @@ async function detectLocationName() {
 }
 
 function initialState() {
-  const lastMobile = localStorage.getItem(LAST_MOBILE_KEY) === DEMO_MOBILE ? DEMO_MOBILE : '';
+  const lastMobile = localStorage.getItem(LAST_MOBILE_KEY) || '';
   return {
     app: { name: '', loc: '', mobile: lastMobile },
     ponds: [emptyPond(0), emptyPond(1), emptyPond(2)],
@@ -116,11 +114,10 @@ export default function App() {
   const [fabOpen, setFabOpen] = useState(false);
 
   useEffect(() => {
-    if (app.mobile.replace(/\D/g, '').slice(-10) !== DEMO_MOBILE) return;
     const key = mobileKey(app.mobile);
     if (!key) return;
     localStorage.setItem(key, JSON.stringify({ app, ponds, entries, cultureData }));
-    localStorage.setItem(LAST_MOBILE_KEY, DEMO_MOBILE);
+    localStorage.setItem(LAST_MOBILE_KEY, app.mobile.replace(/\D/g, '').slice(-10));
   }, [app, ponds, entries, cultureData]);
 
   const totals = useMemo(() => {
@@ -154,8 +151,8 @@ export default function App() {
     const isNewUser = Boolean(options.isNewUser);
     const profile = options.profile;
     const digits = mobile.replace(/\D/g, '').slice(-10);
-    if (digits !== DEMO_MOBILE || pin !== DEMO_PIN) {
-      notify('Unauthorised number or PIN');
+    if (digits.length !== 10 || pin.length !== 4) {
+      notify('Enter valid mobile number and PIN');
       return false;
     }
 
