@@ -59,7 +59,7 @@ export default function AuthPage({ mobile, setMobile, onDetectLocation, onAuth }
       <div className="flex min-h-full flex-1 flex-col overflow-y-auto bg-white px-4 py-6 sm:px-6">
         <div className="mx-auto flex w-full max-w-[430px] flex-1 flex-col">
           <div className="flex shrink-0 justify-center">
-            <img className="w-[min(168px,42vw)] max-[360px]:w-[min(140px,46vw)]" src="/assets/logo.svg" alt="Dr. Grow" />
+            <img className="w-[min(168px,42vw)] max-[360px]:w-[min(140px,46vw)]" src="./assets/logo.svg" alt="Dr. Grow" />
           </div>
 
           <div className="mt-8 grid w-full grid-cols-4 gap-3 sm:gap-4">
@@ -209,7 +209,7 @@ function BrandFooter() {
   return (
     <>
       <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">A brand of</p>
-      <img className="mx-auto w-[min(170px,48vw)]" src="/assets/aquaconnect-logo.svg" alt="Aquaconnect" />
+      <img className="mx-auto w-[min(170px,48vw)]" src="./assets/aquaconnect-logo.svg" alt="Aquaconnect" />
     </>
   );
 }
